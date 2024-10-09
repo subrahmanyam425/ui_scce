@@ -28,12 +28,12 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ inputs.AWS_REGION }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
           echo "Configuring AWS CLI"
-          aws configure export aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure export aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-          aws configure export region $AWS_REGION
+          export aws_access_key_id $AWS_ACCESS_KEY_ID
+          export aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          export region $AWS_REGION
 
       - name: Login to Amazon ECR
         id: login-ecr
