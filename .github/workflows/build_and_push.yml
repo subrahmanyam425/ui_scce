@@ -18,28 +18,31 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Login to Amazon ECR
-        id: login-ecr
+      - name: Configure AWS Credentials
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ inputs.aws_region }}
+          AWS_REGION: ${{ inputs.AWS_REGION }}
+        run: |
+          echo "Configuring AWS CLI"
+          aws configure export aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure export aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure export region $AWS_REGION
+
+      - name: Login to Amazon ECR
+        id: login-ecr
         run: |
           echo "Logging into ECR"
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
 
       - name: Build Docker Image
         id: build-image
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ inputs.aws_region }}
         run: |
           echo "Building Docker Image"
           docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" -t "$ECR_REPOSITORY_URI:${{ inputs.image_tag }}"
