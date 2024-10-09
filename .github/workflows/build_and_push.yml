@@ -45,6 +45,7 @@ jobs:
           echo "Logging into ECR"
           echo "AWS_REGION: $AWS_REGION"  # Debugging line to show the region being used
           echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"  # Debugging line to show if credentials are set
+          echo "ECR_REPOSITORY_URI: #ECR_REPOSITORY_URI"
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
 
       - name: Build Docker Image
