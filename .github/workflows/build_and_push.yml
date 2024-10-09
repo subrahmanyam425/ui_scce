@@ -1,0 +1,61 @@
+name: Build and Push Docker Image to ECR
+
+on:
+  workflow_dispatch:
+    inputs:
+      path_to_dockerfile:
+        description: Path to the Dockerfile
+        default: "Dockerfile"
+        type: string
+      docker_build_dir:
+        description: Docker build directory
+        default: "."
+        type: string
+      image_tag:
+        description: Tag for the image
+        type: string
+        default: "latest"
+      aws_region:
+        description: Target AWS Region
+        default: "us-west-2"
+        type: string
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up AWS CLI Environment
+        run: |
+          echo "Setting up AWS CLI environment"
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ inputs.aws_region }}" >> $GITHUB_ENV
+          echo "ECR_REPOSITORY_URI=${{ secrets.ECR_REPOSITORY_URI }}" >> $GITHUB_ENV
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ inputs.aws_region }}
+          ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+        run: |
+          echo "Logging into ECR"
+          echo "AWS_REGION: $AWS_REGION"  # Debugging line to show the region being used
+          echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"  # Debugging line to show if credentials are set
+          echo "ECR_REPOSITORY_URI: $ECR_REPOSITORY_URI"
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
+
+      - name: Build Docker Image
+        run: |
+          echo "Building Docker Image"
+          docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" -t "$ECR_REPOSITORY_URI:${{ inputs.image_tag }}"
+
+      - name: Push Docker Image to ECR
+        run: |
+          echo "Pushing Docker Image"
+          docker push "$ECR_REPOSITORY_URI:${{ inputs.image_tag }}"
