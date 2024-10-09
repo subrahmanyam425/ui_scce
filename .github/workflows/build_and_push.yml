@@ -1,34 +1,45 @@
-name: Build and Push Docker Image to ECR.
+name: Build and Push Docker Image to ECR
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      path_to_dockerfile:
+        description: Path to the Dockerfile
+        default: "Dockerfile"
+        type: string
+      docker_build_dir:
+        description: Docker build directory
+        default: "."
+        type: string
+      image_tag:
+        description: Tag for the image
+        type: string
+        default: "latest"
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      # Log in to Amazon ECR
+      - name: Configure AWS Credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ inputs.AWS_REGION }}" >> $GITHUB_ENV
+
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          region: ${{ secrets.AWS_REGION }}
-
-      # Build Docker image
-      - name: Build Docker image
         run: |
-          IMAGE_TAG=$(date +%Y%m%d%H%M%S)
-          docker build -t ${{ secrets.ECR_REPOSITORY_URI }}:$IMAGE_TAG .
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
 
-      # Push Docker image to ECR
-      - name: Push Docker image to ECR
+      - name: Build Docker Image
+        id: build-image
         run: |
-          IMAGE_TAG=$(date +%Y%m%d%H%M%S)
-          docker push ${{ secrets.ECR_REPOSITORY_URI }}:$IMAGE_TAG
+          docker build "${{ inputs.docker_build_dir }}" -f "${{ inputs.path_to_dockerfile }}" -t "$ECR_REPOSITORY_URI:${{ inputs.image_tag }}"
+
+      - name: Push Docker Image to ECR
+        run: |
+          docker push "$ECR_REPOSITORY_URI:${{ inputs.image_tag }}"
